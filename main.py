@@ -5,6 +5,7 @@ from PIL import Image
 import pytesseract
 import shutil
 import os
+import re
 
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
@@ -24,8 +25,8 @@ async def check_image(file: UploadFile = File(...)):
     image = Image.open(file_path)
     text = pytesseract.image_to_string(image, lang="rus+eng")
 
-    is_mytopapps = "mytopapps" in text.lower()
-    has_open = "открыть" in text.lower()
+    is_mytopapps = re.search(r"(my)?top.?apps", text.lower()) is not None
+    has_open = re.search(r"отк[рp][ыyи][тt][ьb]?", text.lower()) is not None
     has_pin = "📌" in text or "📍" in text
 
     pinned = is_mytopapps and (has_open or has_pin)

@@ -6,7 +6,7 @@
   <title>Проверка закрепления MyTopApps</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
       padding: 1rem;
       max-width: 480px;
       margin: auto;
@@ -35,6 +35,15 @@
     .fail {
       color: red;
     }
+    .debug {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      color: #555;
+      background: #f0f0f0;
+      padding: 1rem;
+      border-radius: 8px;
+    }
     button {
       margin-top: 1rem;
       width: 100%;
@@ -59,29 +68,41 @@
       <button type="submit">Проверить</button>
     </form>
     <div class="status" id="status"></div>
+    <div class="debug" id="debugText" style="display:none;"></div>
   </div>
 
   <script>
     const form = document.getElementById('uploadForm');
     const statusDiv = document.getElementById('status');
+    const debugDiv = document.getElementById('debugText');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
       statusDiv.textContent = "⏳ Проверка...";
       statusDiv.className = "status";
+      debugDiv.style.display = "none";
 
-      const res = await fetch('/check', {
-        method: 'POST',
-        body: formData
-      });
+      try {
+        const res = await fetch('/check', {
+          method: 'POST',
+          body: formData
+        });
 
-      const data = await res.json();
-      if (data.pinned) {
-        statusDiv.innerHTML = "✅ Бот <strong>ЗАКРЕПЛЁН</strong>!";
-        statusDiv.className = "status success";
-      } else {
-        statusDiv.innerHTML = "❌ Бот <strong>НЕ закреплён</strong>";
+        const data = await res.json();
+
+        if (data.pinned) {
+          statusDiv.innerHTML = "✅ Бот <strong>ЗАКРЕПЛЁН</strong>!";
+          statusDiv.className = "status success";
+        } else {
+          statusDiv.innerHTML = "❌ Бот <strong>НЕ закреплён</strong>";
+          statusDiv.className = "status fail";
+        }
+
+        debugDiv.textContent = "📋 Распознанный текст OCR:\n\n" + data.text_found;
+        debugDiv.style.display = "block";
+      } catch (err) {
+        statusDiv.textContent = "⚠️ Ошибка при проверке. Попробуйте позже.";
         statusDiv.className = "status fail";
       }
     });
