@@ -1,38 +1,23 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
+from pathlib import Path
 from PIL import Image
 import pytesseract
 import shutil
 import os
 
 app = FastAPI()
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-HTML_CONTENT = """
-<!DOCTYPE html>
-<html lang='en'>
-<head>
-    <meta charset='UTF-8'>
-    <title>MyTopApps Pinned Check</title>
-</head>
-<body>
-    <h2>Проверка закрепления MyTopApps 🤖</h2>
-    <form action='/check' method='post' enctype='multipart/form-data'>
-        <input type='file' name='file' accept='image/*' required>
-        <button type='submit'>Загрузить и проверить</button>
-    </form>
-</body>
-</html>
-"""
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 @app.get("/", response_class=HTMLResponse)
-async def get_form():
-    return HTML_CONTENT
+async def index():
+    return (BASE_DIR / "index.html").read_text(encoding="utf-8")
 
 @app.post("/check")
 async def check_image(file: UploadFile = File(...)):
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    file_path = UPLOAD_DIR / file.filename
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
