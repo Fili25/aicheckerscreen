@@ -25,9 +25,15 @@ async def check_image(file: UploadFile = File(...)):
     image = Image.open(file_path)
     text = pytesseract.image_to_string(image, lang="rus+eng")
 
-    # Более точное и гибкое определение
     is_mytopapps = "mytopapps" in text.lower()
-    has_open = re.search(r"[оo0][тt][кk][рp][ыyиe][тt][ьb]?", text.lower()) is not None
+
+    # Улучшенная эвристика для "ОТКРЫТЬ" / "OTKRbTb"
+    has_open = (
+        "откр" in text.lower() or
+        "otkp" in text.lower() or
+        re.search(r"[оo0][тtт][кk][рp][ыyиie][тt][ьb6бв]?", text.lower()) is not None
+    )
+
     has_pin = "📌" in text or "📍" in text
 
     pinned = is_mytopapps and (has_open or has_pin)
