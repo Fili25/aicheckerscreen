@@ -1,40 +1,19 @@
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from pathlib import Path
-import requests
+import cv2
+import pytesseract
+import numpy as np
 import shutil
 import os
-import base64
-import re
 
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-GOOGLE_VISION_API_KEY = "AIzaSyCEN5i2YvLgdgWZu2g0k1EOc65Pb-6jNQ8"
-VISION_API_URL = f"https://vision.googleapis.com/v1/images:annotate?key={GOOGLE_VISION_API_KEY}"
-
-def recognize_text_google_vision(image_path):
-    with open(image_path, "rb") as image_file:
-        encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
-
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "requests": [{
-            "image": {"content": encoded_image},
-            "features": [{"type": "TEXT_DETECTION"}]
-        }]
-    }
-
-    response = requests.post(VISION_API_URL, headers=headers, json=data)
-    result = response.json()
-
-    try:
-        full_text = result["responses"][0]["fullTextAnnotation"]["text"]
-        return full_text
-    except Exception:
-        return ""
+TEMPLATE_PATH = BASE_DIR / "pin_template.png"
+template = cv2.imread(str(TEMPLATE_PATH), cv2.IMREAD_GRAYSCALE)
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
@@ -46,26 +25,24 @@ async def check_image(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    text = recognize_text_google_vision(file_path)
+    image = cv2.imread(str(file_path))
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    is_mytopapps = "mytopapps" in text.lower()
+    data = pytesseract.image_to_data(gray, lang="eng", output_type=pytesseract.Output.DICT)
+    pinned = False
 
-    has_open = (
-        "откр" in text.lower() or
-        "otkp" in text.lower() or
-        re.search(r"[оo0][тtт][кk][рp][ыyиie][тt][ьb6бв]?", text.lower()) is not None
-    )
+    for i, word in enumerate(data["text"]):
+        if "mytopapps" in word.lower():
+            x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+            pad_x, pad_y = 150, 30
+            roi = gray[max(y - pad_y, 0): y + h + pad_y, x + w: x + w + pad_x]
 
-    has_pin = "📌" in text or "📍" in text
+            if roi.size == 0:
+                continue
 
-    pinned = is_mytopapps and (has_open or has_pin)
+            result = cv2.matchTemplate(roi, template, cv2.TM_CCOEFF_NORMED)
+            loc = np.where(result >= 0.90)
+            pinned = len(list(zip(*loc[::-1]))) > 0
+            break
 
-    return JSONResponse({
-        "pinned": pinned,
-        "text_found": text,
-        "matched": {
-            "mytopapps": is_mytopapps,
-            "open": has_open,
-            "pin": has_pin
-        }
-    })
+    return JSONResponse({ "pinned": pinned })

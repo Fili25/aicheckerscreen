@@ -3,94 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Проверка закрепления MyTopApps</title>
+  <title>Проверка закрепления</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-      padding: 1rem;
-      max-width: 480px;
-      margin: auto;
-      background: #f4f4f8;
-      color: #222;
-    }
-    h2 {
-      text-align: center;
-    }
-    .box {
-      background: white;
-      border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      margin-top: 2rem;
-    }
-    .status {
-      font-size: 1.2rem;
-      margin-top: 1rem;
-      text-align: center;
-      font-weight: bold;
-    }
-    .success {
-      color: green;
-    }
-    .fail {
-      color: red;
-    }
-    .debug {
-      margin-top: 1rem;
-      font-size: 0.85rem;
-      white-space: pre-wrap;
-      color: #555;
-      background: #f0f0f0;
-      padding: 1rem;
-      border-radius: 8px;
-    }
-    button {
-      margin-top: 1rem;
-      width: 100%;
-      padding: 0.75rem;
-      background: #0088cc;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-    }
-    input[type="file"] {
-      width: 100%;
-      margin-top: 1rem;
-    }
+    body { font-family: sans-serif; max-width: 480px; margin: auto; padding: 1rem; background: #f4f4f8; }
+    h2 { text-align: center; }
+    .box { background: white; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-top: 2rem; }
+    .status { font-size: 1.2rem; text-align: center; margin-top: 1rem; }
+    .success { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+    button { width: 100%; padding: 0.75rem; background: #0088cc; color: white; border: none; border-radius: 8px; font-size: 1rem; }
+    input[type="file"] { width: 100%; margin-top: 1rem; }
   </style>
 </head>
 <body>
-  <h2>Закреплён ли MyTopApps? 🤖</h2>
+  <h2>Закреплён ли бот? 📌</h2>
   <div class="box">
     <form id="uploadForm">
       <input type="file" name="file" accept="image/*" required>
       <button type="submit">Проверить</button>
     </form>
-    <div class="status" id="status"></div>
-    <div class="debug" id="debugText" style="display:none;"></div>
+    <div id="status" class="status"></div>
   </div>
-
   <script>
     const form = document.getElementById('uploadForm');
     const statusDiv = document.getElementById('status');
-    const debugDiv = document.getElementById('debugText');
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
       statusDiv.textContent = "⏳ Проверка...";
-      statusDiv.className = "status";
-      debugDiv.style.display = "none";
-
       try {
-        const res = await fetch('/check', {
-          method: 'POST',
-          body: formData
-        });
-
+        const res = await fetch('/check', { method: 'POST', body: formData });
         const data = await res.json();
-
         if (data.pinned) {
           statusDiv.innerHTML = "✅ Бот <strong>ЗАКРЕПЛЁН</strong>!";
           statusDiv.className = "status success";
@@ -98,11 +41,8 @@
           statusDiv.innerHTML = "❌ Бот <strong>НЕ закреплён</strong>";
           statusDiv.className = "status fail";
         }
-
-        debugDiv.textContent = "📋 Распознанный текст OCR:\n\n" + data.text_found;
-        debugDiv.style.display = "block";
       } catch (err) {
-        statusDiv.textContent = "⚠️ Ошибка при проверке. Попробуйте позже.";
+        statusDiv.innerText = "Ошибка при проверке.";
         statusDiv.className = "status fail";
       }
     });
